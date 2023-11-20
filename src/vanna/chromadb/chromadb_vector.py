@@ -9,9 +9,6 @@ import pandas as pd
 
 from ..base import VannaBase
 
-default_ef = embedding_functions.DefaultEmbeddingFunction()
-
-
 class ChromaDB_VectorStore(VannaBase):
     def __init__(self, config=None):
         VannaBase.__init__(self, config=config)
@@ -21,21 +18,26 @@ class ChromaDB_VectorStore(VannaBase):
         else:
             path = "."
 
+        if config is not None and "api_key" in config:
+            self.default_ef = embedding_functions.OpenAIEmbeddingFunction(api_key=config["api_key"])
+        else:
+            self.default_ef = embedding_functions.DefaultEmbeddingFunction()
+        
         self.chroma_client = chromadb.PersistentClient(
             path=path, settings=Settings(anonymized_telemetry=False)
         )
         self.documentation_collection = self.chroma_client.get_or_create_collection(
-            name="documentation", embedding_function=default_ef
+            name="documentation", embedding_function=self.default_ef
         )
         self.ddl_collection = self.chroma_client.get_or_create_collection(
-            name="ddl", embedding_function=default_ef
+            name="ddl", embedding_function=self.default_ef
         )
         self.sql_collection = self.chroma_client.get_or_create_collection(
-            name="sql", embedding_function=default_ef
+            name="sql", embedding_function=self.default_ef
         )
 
     def generate_embedding(self, data: str, **kwargs) -> list[float]:
-        embedding = default_ef([data])
+        embedding = self.default_ef([data])
         if len(embedding) == 1:
             return embedding[0]
         return embedding
